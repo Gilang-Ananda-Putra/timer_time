@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Counter & Timer Tracker</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Tracker Aktivitas</h1>
+        
+        <div class="controls">
+            <input type="text" id="itemName" placeholder="Nama Aktivitas (n)">
+            <button onclick="showModal()" class="btn-add">+</button>
+        </div>
+
+        <div id="modal" class="modal">
+            <div class="modal-content">
+                <h3>Pilih Mode</h3>
+                <button onclick="initCounter()">Counter (+/-)</button>
+                <button onclick="initTimer()">Timer</button>
+                <button onclick="closeModal()">Batal</button>
+            </div>
+        </div>
+
+        <div class="interval-settings">
+            <label>Interval Tabel:</label>
+            <input type="number" id="intervalValue" value="10">
+            <select id="intervalUnit">
+                <option value="second">Detik</option>
+                <option value="minute" selected>Menit</option>
+                <option value="hour">Jam</option>
+            </select>
+        </div>
+
+        <table id="dataTable">
+            <thead>
+                <tr>
+                    <th>No</th>
+                    <th>Waktu (Interval)</th>
+                    <th>Nama (n)</th>
+                    <th>Total / Durasi</th>
+                </tr>
+            </thead>
+            <tbody id="tableBody"></tbody>
+        </table>
+        <button onclick="clearData()" class="btn-clear">Hapus Semua Data</button>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

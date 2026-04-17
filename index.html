@@ -2,52 +2,479 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Counter & Timer Tracker</title>
-    <link rel="stylesheet" href="style.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Glass Tracker & Timer</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        /* === TEMA DARK GLASS & AIR === */
+        :root {
+            --primary: rgba(13, 110, 253, 0.8);
+            --success: rgba(25, 135, 84, 0.8);
+            --danger: rgba(220, 53, 69, 0.8);
+            --warning: rgba(255, 193, 7, 0.9);
+            
+            /* Konfigurasi Kaca */
+            --glass-bg: rgba(20, 30, 48, 0.4); 
+            --glass-border: rgba(255, 255, 255, 0.1);
+            --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+            --text-light: #e0e0e0;
+        }
+
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            background: linear-gradient(135deg, #0f2027, #203a43, #2c5364); 
+            background-attachment: fixed;
+            margin: 0; 
+            padding: 20px; 
+            color: var(--text-light); 
+            min-height: 100vh;
+        }
+        
+        .glass-panel {
+            background: var(--glass-bg);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px); 
+            border: 1px solid var(--glass-border);
+            border-radius: 15px;
+            box-shadow: var(--glass-shadow);
+        }
+
+        /* --- Modal Styles --- */
+        .modal-overlay {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.6); backdrop-filter: blur(5px);
+            justify-content: center; align-items: center; z-index: 1000; padding: 15px; box-sizing: border-box;
+        }
+        .modal-content { padding: 25px; width: 100%; max-width: 400px; }
+        .modal-content h3 { margin-top: 0; color: #fff; }
+        
+        /* --- PERBAIKAN INPUT & SELECT DROPDOWN --- */
+        .form-control, select, input[type="number"] { 
+            width: 100%; padding: 12px; margin-bottom: 15px; 
+            background: rgba(0, 0, 0, 0.2); /* Dibuat sedikit lebih gelap */
+            border: 1px solid var(--glass-border); 
+            border-radius: 8px; box-sizing: border-box; 
+            color: #fff; outline: none; transition: 0.3s;
+        }
+        
+        .form-control:focus { 
+            background: rgba(0, 0, 0, 0.4); 
+            border-color: rgba(255, 255, 255, 0.3); 
+        }
+
+        /* Menghapus gaya bawaan browser agar tidak bug di HP */
+        select {
+            cursor: pointer;
+            appearance: none;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            /* Ikon panah kustom */
+            background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%23FFFFFF%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E");
+            background-repeat: no-repeat;
+            background-position: right 15px top 50%;
+            background-size: 12px auto;
+            padding-right: 40px; /* Jarak agar teks tidak menabrak panah */
+        }
+
+        /* Option tidak boleh diberi padding/style berlebihan agar mobile native UI tidak rusak */
+        select option { 
+            background-color: #1a252f; 
+            color: #ffffff; 
+        }
+
+        /* --- Button Styles --- */
+        button { 
+            padding: 10px 15px; border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; 
+            cursor: pointer; color: white; font-weight: bold; transition: 0.3s; 
+            backdrop-filter: blur(5px); text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+        }
+        .btn-primary { background: var(--primary); }
+        .btn-success { background: var(--success); }
+        .btn-danger { background: var(--danger); }
+        .btn-warning { background: var(--warning); color: #000; text-shadow: none; }
+        .btn-secondary { background: rgba(255, 255, 255, 0.1); }
+        button:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0,0,0,0.3); filter: brightness(1.2); }
+        button:active { transform: translateY(0); }
+
+        /* --- Dashboard Styles --- */
+        .add-box {
+            padding: 20px; text-align: center; cursor: pointer; margin-bottom: 20px; 
+            color: #aaa; font-size: 18px; font-weight: bold; transition: 0.3s;
+            border: 2px dashed rgba(255,255,255,0.2);
+        }
+        .add-box:hover { border-color: #fff; color: #fff; background: rgba(255,255,255,0.05); }
+        
+        .tracker-card {
+            padding: 20px; margin-bottom: 15px; 
+            display: flex; flex-direction: column; align-items: center; text-align: center; gap: 15px;
+        }
+        .tracker-info { width: 100%; }
+        .tracker-info h4 { margin: 0 0 5px 0; font-size: 1.2rem; color: #fff; }
+        
+        .tracker-controls { 
+            display: flex; flex-direction: column; width: 100%; gap: 12px; 
+        }
+        .action-buttons { 
+            display: flex; gap: 10px; width: 100%; 
+        }
+        .action-buttons button { 
+            flex: 1;
+        }
+        .btn-full { 
+            width: 100%; 
+        }
+
+        .counter-value { font-size: 28px; font-weight: bold; color: #fff; text-shadow: 0 0 10px rgba(255,255,255,0.2); margin-bottom: 5px; }
+        .timer-display { font-size: 22px; font-weight: bold; font-family: monospace; color: #fff; margin-bottom: 5px; }
+
+        /* --- Detail View Styles --- */
+        #detailView { display: none; padding: 25px; margin-top: 20px; }
+        .chart-container { width: 100%; max-height: 350px; margin-bottom: 20px; position: relative; }
+        
+        .table-responsive { width: 100%; overflow-x: auto; border-radius: 8px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; color: #fff; }
+        th, td { border: 1px solid var(--glass-border); padding: 12px; text-align: center; white-space: nowrap; }
+        th { background: rgba(255,255,255,0.1); font-weight: bold; text-transform: uppercase; letter-spacing: 1px; font-size: 0.9rem; }
+        td { background: rgba(0,0,0,0.1); }
+        
+        .detail-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .filter-box { padding: 15px; margin-bottom: 20px; display: inline-flex; align-items: center; gap: 10px; width: 100%; box-sizing: border-box; }
+
+        /* --- Mobile Responsiveness --- */
+        @media (max-width: 768px) {
+            body { padding: 10px; }
+            h1 { font-size: 1.5rem; }
+            .detail-header { flex-direction: column; align-items: flex-start; gap: 15px; }
+            #detailTitle { font-size: 1.2rem; margin: 0; }
+            .filter-box { flex-direction: column; align-items: stretch; }
+            .filter-box input, .filter-box select { width: 100%; }
+            .chart-container { height: 250px; }
+        }
+    </style>
 </head>
 <body>
-    <div class="container">
-        <h1>Tracker Aktivitas</h1>
-        
-        <div class="controls">
-            <input type="text" id="itemName" placeholder="Nama Aktivitas (n)">
-            <button onclick="showModal()" class="btn-add">+</button>
+
+    <div id="dashboardView">
+        <h1 style="text-align: center; color: #fff; text-shadow: 0 2px 5px rgba(0,0,0,0.5);">Dashboard Tracker</h1>
+        <div class="glass-panel add-box" onclick="openModal()">
+            + Tambah Tracker Baru
+        </div>
+        <div id="trackerList"></div>
+    </div>
+
+    <div id="detailView" class="glass-panel">
+        <div class="detail-header">
+            <button class="btn-secondary" onclick="closeDetail()">&#8592; Kembali</button>
+            <h2 id="detailTitle" style="color: #fff; margin:0;">Detail Tracker</h2>
+            <div style="width: 80px;" class="hide-mobile"></div>
         </div>
 
-        <div id="modal" class="modal">
-            <div class="modal-content">
-                <h3>Pilih Mode</h3>
-                <button onclick="initCounter()">Counter (+/-)</button>
-                <button onclick="initTimer()">Timer</button>
-                <button onclick="closeModal()">Batal</button>
-            </div>
-        </div>
-
-        <div class="interval-settings">
-            <label>Interval Tabel:</label>
-            <input type="number" id="intervalValue" value="10">
-            <select id="intervalUnit">
-                <option value="second">Detik</option>
-                <option value="minute" selected>Menit</option>
+        <div id="filterContainer" class="glass-panel filter-box" style="display: none;">
+            <label style="white-space: nowrap;">Tabel & Grafik Per:</label>
+            <input type="number" id="intervalVal" value="10" onchange="updateDetailView()" style="margin-bottom:0; flex:1;">
+            <select id="intervalUnit" onchange="updateDetailView()" style="margin-bottom:0; flex:2;">
+                <option value="sec">Detik</option>
+                <option value="min" selected>Menit</option>
                 <option value="hour">Jam</option>
             </select>
         </div>
 
-        <table id="dataTable">
-            <thead>
-                <tr>
-                    <th>No</th>
-                    <th>Waktu (Interval)</th>
-                    <th>Nama (n)</th>
-                    <th>Total / Durasi</th>
-                </tr>
-            </thead>
-            <tbody id="tableBody"></tbody>
-        </table>
-        <button onclick="clearData()" class="btn-clear">Hapus Semua Data</button>
+        <div class="chart-container">
+            <canvas id="trackerChart"></canvas>
+        </div>
+
+        <div id="tableContainer" class="table-responsive"></div>
     </div>
 
-    <script src="script.js"></script>
+    <div class="modal-overlay" id="addModal">
+        <div class="glass-panel modal-content">
+            <h3>Buat Tracker Baru</h3>
+            <input type="text" id="tName" class="form-control" placeholder="Nama Tracker (cth: Barang A)">
+            <select id="tType" class="form-control">
+                <option value="counter">Menghitung (Counter)</option>
+                <option value="timer">Timer Waktu</option>
+            </select>
+            <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 10px;">
+                <button class="btn-secondary" onclick="closeModal()">Batal</button>
+                <button class="btn-primary" onclick="addTracker()">Tambahkan</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        Chart.defaults.color = '#e0e0e0';
+        Chart.defaults.borderColor = 'rgba(255, 255, 255, 0.1)';
+
+        let trackers = JSON.parse(localStorage.getItem('appTrackersV2')) || [];
+        let activeTrackerId = null;
+        let chartInstance = null;
+        let liveTimerInterval = null;
+
+        function saveData() {
+            localStorage.setItem('appTrackersV2', JSON.stringify(trackers));
+            renderDashboard();
+            if(activeTrackerId) updateDetailView();
+        }
+
+        function openModal() { document.getElementById('addModal').style.display = 'flex'; }
+        function closeModal() { document.getElementById('addModal').style.display = 'none'; document.getElementById('tName').value = ''; }
+        
+        function addTracker() {
+            const name = document.getElementById('tName').value;
+            const type = document.getElementById('tType').value;
+            if(!name) return alert("Nama wajib diisi!");
+
+            trackers.push({
+                id: Date.now().toString(),
+                name: name,
+                type: type,
+                totalCount: 0,
+                logs: [], 
+                timerState: { isRunning: false, startTimestamp: null, pausedTime: 0 }
+            });
+            
+            saveData();
+            closeModal();
+        }
+
+        function openDetail(id) {
+            activeTrackerId = id;
+            document.getElementById('dashboardView').style.display = 'none';
+            document.getElementById('detailView').style.display = 'block';
+            updateDetailView();
+        }
+
+        function closeDetail() {
+            activeTrackerId = null;
+            document.getElementById('detailView').style.display = 'none';
+            document.getElementById('dashboardView').style.display = 'block';
+            renderDashboard();
+        }
+
+        function updateCounter(id, val) {
+            const t = trackers.find(x => x.id === id);
+            t.totalCount += val;
+            t.logs.push({ time: Date.now(), val: val });
+            saveData();
+        }
+
+        function startTimer(id) {
+            const t = trackers.find(x => x.id === id);
+            if (!t.timerState.isRunning) {
+                t.timerState.isRunning = true;
+                t.timerState.startTimestamp = Date.now();
+                saveData();
+            }
+        }
+
+        function pauseTimer(id) {
+            const t = trackers.find(x => x.id === id);
+            if (t.timerState.isRunning) {
+                t.timerState.isRunning = false;
+                t.timerState.pausedTime += (Date.now() - t.timerState.startTimestamp);
+                saveData();
+            }
+        }
+
+        function stopTimer(id) {
+            const t = trackers.find(x => x.id === id);
+            let totalSessionTime = t.timerState.pausedTime;
+            
+            if (t.timerState.isRunning) {
+                totalSessionTime += (Date.now() - t.timerState.startTimestamp);
+            }
+
+            if (totalSessionTime > 0) {
+                t.logs.push({
+                    start: t.timerState.isRunning ? t.timerState.startTimestamp : (Date.now() - t.timerState.pausedTime),
+                    end: Date.now(),
+                    duration: totalSessionTime
+                });
+            }
+
+            t.timerState.isRunning = false;
+            t.timerState.startTimestamp = null;
+            t.timerState.pausedTime = 0;
+            saveData();
+        }
+
+        function formatHMS(ms) {
+            let totalSeconds = Math.floor(ms / 1000);
+            let h = String(Math.floor(totalSeconds / 3600)).padStart(2, '0');
+            let m = String(Math.floor((totalSeconds % 3600) / 60)).padStart(2, '0');
+            let s = String(totalSeconds % 60).padStart(2, '0');
+            return `${h}:${m}:${s}`;
+        }
+
+        function getFormattedTime(timestamp) {
+            let d = new Date(timestamp);
+            return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}:${String(d.getSeconds()).padStart(2, '0')}`;
+        }
+
+        if(liveTimerInterval) clearInterval(liveTimerInterval);
+        liveTimerInterval = setInterval(() => {
+            trackers.forEach(t => {
+                if(t.type === 'timer' && t.timerState.isRunning) {
+                    let el = document.getElementById(`timer-display-${t.id}`);
+                    if(el) {
+                        let currentElapsed = t.timerState.pausedTime + (Date.now() - t.timerState.startTimestamp);
+                        el.innerText = formatHMS(currentElapsed);
+                    }
+                }
+            });
+        }, 1000);
+
+        function renderDashboard() {
+            const container = document.getElementById('trackerList');
+            container.innerHTML = '';
+
+            trackers.forEach(t => {
+                let controlsHtml = '';
+                
+                if (t.type === 'counter') {
+                    controlsHtml = `
+                        <div class="counter-value">${t.totalCount}</div>
+                        <div class="action-buttons">
+                            <button class="btn-danger" onclick="updateCounter('${t.id}', -1)">- Kurangi</button>
+                            <button class="btn-success" onclick="updateCounter('${t.id}', 1)">+ Tambah</button>
+                        </div>
+                        <button class="btn-primary btn-full" onclick="openDetail('${t.id}')">View</button>
+                    `;
+                } else {
+                    let currentMs = t.timerState.pausedTime;
+                    if(t.timerState.isRunning) currentMs += (Date.now() - t.timerState.startTimestamp);
+                    
+                    controlsHtml = `
+                        <div class="timer-display" id="timer-display-${t.id}">${formatHMS(currentMs)}</div>
+                        <div class="action-buttons">
+                            <button class="btn-success" onclick="startTimer('${t.id}')">Start</button>
+                            <button class="btn-warning" onclick="pauseTimer('${t.id}')">Pause</button>
+                            <button class="btn-danger" onclick="stopTimer('${t.id}')">Stop</button>
+                        </div>
+                        <button class="btn-primary btn-full" onclick="openDetail('${t.id}')">View</button>
+                    `;
+                }
+
+                container.innerHTML += `
+                    <div class="glass-panel tracker-card">
+                        <div class="tracker-info">
+                            <h4>${t.name}</h4>
+                            <small style="color:rgba(255,255,255,0.6);">${t.type === 'counter' ? 'Penghitung (Counter)' : 'Timer Waktu'}</small>
+                        </div>
+                        <div class="tracker-controls">${controlsHtml}</div>
+                    </div>
+                `;
+            });
+        }
+
+        function updateDetailView() {
+            const t = trackers.find(x => x.id === activeTrackerId);
+            if(!t) return;
+
+            document.getElementById('detailTitle').innerText = `Statistik: ${t.name}`;
+            const filterContainer = document.getElementById('filterContainer');
+            const tableContainer = document.getElementById('tableContainer');
+            
+            let labels = [];
+            let dataPoints = [];
+            let tableHtml = '';
+
+            if (t.type === 'counter') {
+                filterContainer.style.display = 'flex';
+                const intervalVal = parseInt(document.getElementById('intervalVal').value) || 1;
+                const unit = document.getElementById('intervalUnit').value;
+                
+                let msPerInterval = 1000;
+                if(unit === 'sec') msPerInterval *= intervalVal;
+                if(unit === 'min') msPerInterval *= (intervalVal * 60);
+                if(unit === 'hour') msPerInterval *= (intervalVal * 3600);
+
+                let bins = {};
+                let firstTime = t.logs.length > 0 ? t.logs[0].time : Date.now();
+                
+                t.logs.forEach(log => {
+                    let binIdx = Math.floor((log.time - firstTime) / msPerInterval);
+                    bins[binIdx] = (bins[binIdx] || 0) + log.val;
+                });
+
+                tableHtml = `<table><tr><th>Waktu</th><th>Jumlah Tambahan</th></tr>`;
+                
+                if(t.logs.length > 0) {
+                    let maxBin = Math.max(...Object.keys(bins).map(Number));
+                    for(let i=0; i<=maxBin; i++) {
+                        let startT = firstTime + (i * msPerInterval);
+                        let endT = startT + msPerInterval;
+                        let timeLabel = `${getFormattedTime(startT)} - ${getFormattedTime(endT)}`;
+                        
+                        labels.push(timeLabel);
+                        dataPoints.push(bins[i] || 0);
+                        
+                        tableHtml += `<tr><td>${timeLabel}</td><td>${bins[i] || 0}</td></tr>`;
+                    }
+                }
+                tableHtml += `</table>`;
+
+            } else {
+                filterContainer.style.display = 'none';
+                tableHtml = `<table><tr><th>Sesi</th><th>Mulai</th><th>Selesai</th><th>Durasi</th></tr>`;
+                
+                t.logs.forEach((log, idx) => {
+                    let sesiName = `Sesi ${idx + 1}`;
+                    labels.push(sesiName);
+                    dataPoints.push((log.duration / 60000).toFixed(2)); 
+                    
+                    tableHtml += `<tr>
+                        <td>${sesiName}</td>
+                        <td>${getFormattedTime(log.start)}</td>
+                        <td>${getFormattedTime(log.end)}</td>
+                        <td>${formatHMS(log.duration)}</td>
+                    </tr>`;
+                });
+                tableHtml += `</table>`;
+            }
+
+            tableContainer.innerHTML = tableHtml;
+            renderChart(labels, dataPoints, t.type);
+        }
+
+        function renderChart(labels, dataPoints, type) {
+            const ctx = document.getElementById('trackerChart').getContext('2d');
+            
+            if(chartInstance) chartInstance.destroy(); 
+
+            let chartLabel = type === 'counter' ? 'Jumlah Klik per Interval' : 'Durasi Sesi (Menit)';
+
+            let neonColor = type === 'counter' ? 'rgba(54, 162, 235, 1)' : 'rgba(255, 206, 86, 1)';
+            let neonBg = type === 'counter' ? 'rgba(54, 162, 235, 0.2)' : 'rgba(255, 206, 86, 0.2)';
+
+            chartInstance = new Chart(ctx, {
+                type: type === 'counter' ? 'line' : 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: chartLabel,
+                        data: dataPoints,
+                        backgroundColor: neonBg,
+                        borderColor: neonColor,
+                        borderWidth: 2,
+                        fill: type === 'counter',
+                        tension: 0.3,
+                        pointBackgroundColor: '#fff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { labels: { color: '#fff' } } },
+                    scales: { 
+                        y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.1)' } },
+                        x: { grid: { color: 'rgba(255,255,255,0.1)' } }
+                    }
+                }
+            });
+        }
+
+        renderDashboard();
+    </script>
 </body>
 </html>
